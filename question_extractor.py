@@ -14,11 +14,12 @@ def extract_text_from_docx(file_path):
 
 def extract_text_from_pdf(file_path):
     with open(file_path, 'rb') as file:
-        reader = PyPDF2.PdfFileReader(file)
+        reader = PyPDF2.PdfReader(file)
         text = []
-        for page in range(reader.numPages):
-            text.append(reader.getPage(page).extractText())
-    return '\n'.join(text)
+        for page_num in range(len(reader.pages)):
+            page = reader.pages[page_num]
+            text.append(page.extract_text())
+        return '\n'.join(text)
 
 
 def extract_text(file_path):
