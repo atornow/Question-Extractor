@@ -25,3 +25,32 @@ def extract_text(file_path):
     else:
         raise ValueError('Unsupported file format')
     
+def extract_questions(text):
+    questions = []
+    lines = text.split('\n')
+    current_question = None
+    
+    for line in lines:
+        line = line.strip()
+        
+        if re.match(r'^\d+[.)]', line):
+            if current_question:
+                questions.append(current_question)
+            current_question = {
+                'question': line,
+                'options': [],
+                'answer_format': '',
+                'location': ''
+            }
+        elif current_question:
+            if re.match(r'^[a-z][.)]', line):
+                current_question['options'].append(line)
+            elif re.search(r'\([^)]+\)', line):
+                current_question['answer_format'] = re.search(r'\(([^)]+)\)', line).group(1)
+            else:
+                current_question['question'] += ' ' + line
+    
+    if current_question:
+        questions.append(current_question)
+    
+    return questions
