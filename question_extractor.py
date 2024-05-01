@@ -2,6 +2,7 @@ import json
 import re
 import docx
 import PyPDF2
+import sys
 
 def extract_text_from_docx(file_path):
     doc = docx.Document(file_path)
@@ -10,6 +11,7 @@ def extract_text_from_docx(file_path):
         text.append(paragraph.text)
     return '\n'.join(text)
 
+
 def extract_text_from_pdf(file_path):
     with open(file_path, 'rb') as file:
         reader = PyPDF2.PdfFileReader(file)
@@ -17,6 +19,8 @@ def extract_text_from_pdf(file_path):
         for page in range(reader.numPages):
             text.append(reader.getPage(page).extractText())
     return '\n'.join(text)
+
+
 def extract_text(file_path):
     if file_path.endswith('.doc') or file_path.endswith('.docx'):
         return extract_text_from_docx(file_path)
@@ -24,12 +28,14 @@ def extract_text(file_path):
         return extract_text_from_pdf(file_path)
     else:
         raise ValueError('Unsupported file format')
-    
+
+
 def extract_questions(text):
     questions = []
     lines = text.split('\n')
     current_question = None
-    question_pattern = re.compile(r'^(?:\d+[\).]|[a-zA-Z][\).]|[IVX]+[\).]|#)\s+(.+(?:\n(?!\s*(?:[a-z][\).]|(?:Yes|No|N/A))).+)*)$', re.M)
+    question_pattern = re.compile(
+        r'^(?:\d+[\).]|[a-zA-Z][\).]|[IVX]+[\).]|#)\s+(.+(?:\n(?!\s*(?:[a-z][\).]|(?:Yes|No|N/A))).+)*)$', re.M)
     option_pattern = re.compile(r'^[a-z][\).]\s+(.+)$')
 
     for line in lines:
@@ -61,7 +67,14 @@ def extract_questions(text):
 
     return questions
 
+
 def main(file_path):
+    print(f"Processing file: {file_path}")
+    try:
+        text = extract_text(file_path)
+    except Exception as e:
+        print(f"Error extracting text: {str(e)}")
+        return
     try:
         text = extract_text(file_path)
         questions = extract_questions(text)
@@ -69,3 +82,11 @@ def main(file_path):
         print(output)
     except Exception as e:
         print(f'Error: {str(e)}')
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python question_extractor.py <file_path>")
+        sys.exit(1)
+
+    file_path = sys.argv[1]
+    main(file_path)
