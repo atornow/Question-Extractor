@@ -29,28 +29,43 @@ def extract_questions(text):
     questions = []
     lines = text.split('\n')
     current_question = None
-    
+    question_pattern = re.compile(r'^(?:\d+[\).]|[a-zA-Z][\).]|[IVX]+[\).]|#)\s+(.+(?:\n(?!\s*(?:[a-z][\).]|(?:Yes|No|N/A))).+)*)$', re.M)
+    option_pattern = re.compile(r'^[a-z][\).]\s+(.+)$')
+
     for line in lines:
         line = line.strip()
-        
-        if re.match(r'^\d+[.)]', line):
+        question_match = question_pattern.match(line)
+        option_match = option_pattern.match(line)
+
+        if question_match:
             if current_question:
                 questions.append(current_question)
+            question_text = question_match.group(1).replace('\n', ' ').strip()
             current_question = {
-                'question': line,
+                'question': question_text,
                 'options': [],
                 'answer_format': '',
                 'location': ''
             }
+        elif option_match:
+            if current_question:
+                current_question['options'].append(option_match.group(1))
         elif current_question:
-            if re.match(r'^[a-z][.)]', line):
-                current_question['options'].append(line)
-            elif re.search(r'\([^)]+\)', line):
+            if re.search(r'\([^)]+\)', line):
                 current_question['answer_format'] = re.search(r'\(([^)]+)\)', line).group(1)
             else:
-                current_question['question'] += ' ' + line
-    
+                current_question['question'] += ' ' + line.strip()
+
     if current_question:
         questions.append(current_question)
-    
+
     return questions
+
+def main(file_path):
+    try:
+        text = extract_text(file_path)
+        questions = extract_questions(text)
+        output = json.dumps(questions, indent=2)
+        print(output)
+    except Exception as e:
+        print(f'Error: {str(e)}')
