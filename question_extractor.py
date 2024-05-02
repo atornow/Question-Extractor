@@ -1,7 +1,5 @@
-import json
-import re
 import docx
-import PyPDF2
+from pypdf import PdfReader
 import sys
 import os
 import anthropic
@@ -22,12 +20,11 @@ def extract_text_from_docx(file_path):
 
 def extract_text_from_pdf(file_path):
     with open(file_path, 'rb') as file:
-        reader = PyPDF2.PdfReader(file)
-        text = []
-        for page_num in range(len(reader.pages)):
-            page = reader.pages[page_num]
-            text.append(page.extract_text())
-        return '\n'.join(text)
+        reader = PdfReader(file)
+        number_of_pages = len(reader.pages)
+        text = ''.join([page.extract_text() for page in reader.pages])
+        print(text)
+        return text
 
 def extract_text(file_path):
     if file_path.endswith('.doc') or file_path.endswith('.docx'):
@@ -49,9 +46,9 @@ def main(file_path):
     try:
         message = client.messages.create(
             model="claude-3-sonnet-20240229",
-            max_tokens=1000,
+            max_tokens=2500,
             temperature=0,
-            system="You are an AI assistant made to extract questions and answer options from documents. Your task is to process the user-provided text and output a CSV file containing all identified questions, output should include ONLY the CSV itself.\nFor each question, include the following columns in the CSV output:\n\nQuestion Text (with any commas or special characters escaped)\nQuestion Number (assign a default of '-' if missing)\nParent Question Number (to link sub-questions to their parent, blank if not a sub-question)\nIs Not Open Response (1) or Is Open Response (0)\nAnswer Options (a single CSV column containing options separated by '/', blank if none)\n\nTo determine if a question is open response, look for keywords like 'If yes' or 'Indicate how' in addition to the absence of explicit answer options. Use NLP techniques to better understand the question semantics.\nHandle variations in question formatting and numbering by using flexible regex patterns. Extract answer options using these regex patterns as well as NLP to isolate the options based on context.\nPreprocess the extracted text to remove empty lines, irrelevant content, and handle common OCR errors. Use heuristics to identify and skip over non-question content like instructions and headers.\nFor multi-part questions, detect the sub-questions based on numbering schemes and phrasing, and group them with their parent question using the 'Parent Question Number' column.\nClarify any ambiguous situations by referencing the techniques described above. If a question truly cannot be parsed, leave its row blank to avoid outputting bad data.\nThe output format should be a valid CSV with commas and special characters properly escaped. Aim to extract questions individually to avoid misparsing, but include the full text of each multi-part question. \nRemember, the goal is to produce a comprehensive, machine-readable set of questions and answer options to enable downstream analysis. Strive for accuracy and completeness, but also make reasonable judgments to handle the variety of formats found in real-world documents.",
+            system="You are an AI assistant made to extract questions and answer options from documents. Your task is to process the user-provided text and output a CSV file containing all identified questions, output should include ONLY the CSV itself.\nFor each question, include the following columns in the CSV output:\n\nQuestion Text (with any commas or special characters escaped)\nQuestion Number (assign a default of '-' if missing)\nIs Multiple Choice (1) or Is Open Response (0)\nAnswer Options (a single CSV column containing options separated by '/', blank if none)\n\n Use NLP techniques to better understand the question semantics.\nHandle variations in question formatting and numbering by using flexible regex patterns. Extract answer options using these regex patterns as well as NLP to isolate the options based on context.\nPreprocess the extracted text to remove empty lines, irrelevant content, and handle common OCR errors. Use heuristics to identify and skip over non-question content like instructions and headers.\nFor questions with dependent sub-questions include the direct answer as the option for the parent question (ie. a yes or no question should still have options listed yes/no listed, or x/y/z with different sub-questions if x y or z should still list x/y/z as options for parent). Any subquestions (if yes, or if x/y/z type questions) should be included as their own CSV item with accurate numbering.\nClarify any ambiguous situations by referencing the techniques described above. If a question truly cannot be parsed, DO NOT return anything except the string: FALIURE - (give question or questions of issue),to avoid outputting bad data.\nThe output format should be a valid CSV with commas and special characters properly escaped. Aim to extract questions individually to avoid misparsing, but include the full text of each multi-part question. \nRemember, the goal is to produce a comprehensive, machine-readable set of questions and answer options to enable downstream analysis. Strive for accuracy and completeness, but also make reasonable judgments to handle the variety of formats found in real-world documents.",
             messages=[
                 {
                     "role": "user",
