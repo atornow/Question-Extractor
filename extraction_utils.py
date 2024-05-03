@@ -88,4 +88,26 @@ def extract_answer_options(text, questions_csv, client, model="claude-3-sonnet-2
         ]
     )
     return message.content[0].text if message.content else ""
+def calculate_cost(text, model, function_name, is_input=True):
+    token_count = len(text.split())
+    
+    if function_name == "extract_questions":
+        system_prompt = "Your task is to extract the questions from this text converted from a document into a machine-readable CSV format.\n\nThe CSV output should contain the following fields for each question:\n- question_text: The text of the question\n- question_number: The question number. For subquestions like \"b.\" under question 2.6, format as \"2.6.b\"  \n\nTo complete this task:\n\n<scratchpad>\n1. Carefully analyze the security document text to identify all questions. \n2. For each question found:\n   a. Extract the question text\n   b. Determine the question number, accounting for any subquestion structure\n3. Format each question's data into a CSV row following the specified fields\n4. Combine all question rows into a single CSV output, with one question per row\n</scratchpad>\n\nAfter completing the CSV, please output the entire CSV inside <csv> tags, like this:\n\n<csv>\nquestion_text,question_number\n\"Question 1 text\",1\n\"Question 2 text\",2\n\"Question 2 a subquestion\",2.a\n</csv>\n\nRemember, the output should always be a valid CSV that strictly matches the described format, with all questions from the input text included."
+    elif function_name == "clean_csv":
+        system_prompt = "Your task is to clean up the provided CSV containing extracted questions. Ensure that the CSV contains only valid question records, with each field in the correct position. If any record appears malformed or has fields out of position, attempt to correct it. The CSV should maintain the following format:\n\nquestion_text,question_number\n\nAfter cleaning the CSV, please output the pure CSV nothing else."
+    elif function_name == "extract_answer_options":
+        system_prompt = "Your task is to extract the answer options for the questions in the provided CSV and determine if each question is multiple choice. The CSV contains questions extracted from a text document.\n\nThe updated CSV output should contain the following fields for each question:\n- question_text: The text of the question\n- question_number: The question number. For subquestions like \"b.\" under question 2.6, format as \"2.6.b\"  \n- is_multiple_choice: 1 if the question has multiple choice options, 0 if not\n- answer_options: If is_multiple_choice is 1, a slash (/) delimited list of the possible answer options. For yes/no questions, format as \"yes/no\". Leave blank if not multiple choice.\n\nTo complete this task:\n\n<scratchpad>\n1. For each question in the provided CSV:\n   a. Carefully analyze the original text document to find the question and determine if it has answer options\n   b. If the question has answer options, set is_multiple_choice to 1 and extract a clean list of the options in the answer_options field\n   c. If the question does not have answer options, set is_multiple_choice to 0 and leave answer_options blank\n2. Output the updated CSV with the is_multiple_choice and answer_options fields added\n</scratchpad>\n\nWhen extracting answer options, be sure to robustly handle any format or style they are written in. The goal is to have a clean, complete list for each multiple choice question.\n\nAfter completing the CSV, please output the entire updated CSV inside <csv> tags, like this:\n\n<csv>\nquestion_text,question_number,is_multiple_choice,answer_options\n\"Question 1 text\",1,0,\n\"Question 2 text\",2,1,\"Option 1/Option 2/Option 3\"\n\"Question 2 a subquestion\",2.a,1,\"yes/no\"\n</csv>\n\nRemember, the output should always be a valid CSV that strictly matches the described format, with is_multiple_choice and answer options added for each question."
+    else:
+        system_prompt = ""
 
+    if is_input:
+        token_count += len(system_prompt.split())
+
+    if model == "claude-3-haiku-20240307":
+        cost_per_token = 0.25 / 1e6 if is_input else 1.25 / 1e6
+    elif model == "claude-3-sonnet-20240229":
+        cost_per_token = 3 / 1e6 if is_input else 15 / 1e6
+    else:  # claude-3-opus-20240229
+        cost_per_token = 15 / 1e6 if is_input else 75 / 1e6
+    
+    return cost_per_token * token_count

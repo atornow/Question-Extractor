@@ -2,7 +2,7 @@ import sys
 import os
 from dotenv import load_dotenv
 import anthropic
-from extraction_utils import extract_text, extract_questions, clean_csv, extract_answer_options
+from extraction_utils import extract_text, extract_questions, clean_csv, extract_answer_options, calculate_cost
 
 load_dotenv(os.path.join(os.path.dirname(__file__), 'main.env'))
 
@@ -36,6 +36,14 @@ def main(file_path):
             with open(csv_file_path, "w", newline="") as csvfile:
                 csvfile.write(final_csv)
             print(f"CSV file saved as: {csv_file_path}")
+            total_cost = 0
+            total_cost += calculate_cost(text, "claude-3-sonnet-20240229", "extract_questions", is_input=True)
+            total_cost += calculate_cost(questions_csv, "claude-3-sonnet-20240229", "", is_input=False)
+            total_cost += calculate_cost(questions_csv, "claude-3-sonnet-20240229", "clean_csv", is_input=True)
+            total_cost += calculate_cost(cleaned_questions_csv, "claude-3-sonnet-20240229", "", is_input=False)
+            total_cost += calculate_cost(cleaned_questions_csv, "claude-3-sonnet-20240229", "extract_answer_options", is_input=True)
+            total_cost += calculate_cost(final_csv, "claude-3-sonnet-20240229", "", is_input=False)
+            print(f"Predicted run cost: ${total_cost:.4f}")
         else:
             print("No content received from API, unable to save CSV file.")
 
