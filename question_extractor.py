@@ -2,7 +2,7 @@ import sys
 import os
 from dotenv import load_dotenv
 import anthropic
-from extraction_utils import extract_text, extract_questions, clean_csv, extract_answer_options, calculate_cost, clean_final_csv
+from extraction_utils import extract_text, extract_questions, clean_csv, extract_answer_options, calculate_cost, clean_final_csv, extract_question_sections
 
 load_dotenv(os.path.join(os.path.dirname(__file__), 'main.env'))
 
@@ -34,6 +34,10 @@ def main(file_path, model="claude-3-opus-20240229"):
         print("Final CSV cleaned:")
         print(cleaned_final_csv)
 
+        question_sections_csv = extract_question_sections(text, cleaned_final_csv, client, model)
+        print("Question sections extracted:")
+        print(question_sections_csv)
+
         total_cost = 0
         total_cost += calculate_cost(text, model, "extract_questions", is_input=True)
         total_cost += calculate_cost(questions_csv, model, "", is_input=False)
@@ -43,6 +47,8 @@ def main(file_path, model="claude-3-opus-20240229"):
         total_cost += calculate_cost(final_csv, model, "", is_input=False)
         total_cost += calculate_cost(final_csv, model, "clean_final_csv", is_input=True)
         total_cost += calculate_cost(cleaned_final_csv, model, "", is_input=False)
+        total_cost += calculate_cost(text, model, "extract_question_sections", is_input=True)
+        total_cost += calculate_cost(question_sections_csv, model, "", is_input=False)
         print(f"Predicted run cost: ${total_cost:.4f}")
 
         if cleaned_final_csv:
@@ -50,9 +56,18 @@ def main(file_path, model="claude-3-opus-20240229"):
             csv_file_path = f"{file_name}_{model}_questions.csv"
             with open(csv_file_path, "w", newline="") as csvfile:
                 csvfile.write(cleaned_final_csv)
-            print(f"CSV file saved as: {csv_file_path}")
+            print(f"Questions CSV file saved as: {csv_file_path}")
         else:
-            print("No content received from API, unable to save CSV file.")
+            print("No content received from API for questions CSV, unable to save file.")
+
+        if question_sections_csv:
+            file_name, _ = os.path.splitext(file_path)
+            csv_file_path = f"{file_name}_{model}_question_sections.csv"
+            with open(csv_file_path, "w", newline="") as csvfile:
+                csvfile.write(question_sections_csv)
+            print(f"Question sections CSV file saved as: {csv_file_path}")
+        else:
+            print("No content received from API for question sections CSV, unable to save file.")
 
     except Exception as e:
         print(f'Error: {str(e)}')
