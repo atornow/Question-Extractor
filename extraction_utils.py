@@ -89,7 +89,7 @@ def extract_answer_options(text, questions_csv, client, model="claude-3-sonnet-2
     )
     return message.content[0].text if message.content else ""
 def calculate_cost(text, model, function_name, is_input=True):
-    token_count = len(text.split())
+    token_count = len(text) // 4
     
     if function_name == "extract_questions":
         system_prompt = "Your task is to extract the questions from this text converted from a document into a machine-readable CSV format.\n\nThe CSV output should contain the following fields for each question:\n- question_text: The text of the question\n- question_number: The question number. For subquestions like \"b.\" under question 2.6, format as \"2.6.b\"  \n\nTo complete this task:\n\n<scratchpad>\n1. Carefully analyze the security document text to identify all questions. \n2. For each question found:\n   a. Extract the question text\n   b. Determine the question number, accounting for any subquestion structure\n3. Format each question's data into a CSV row following the specified fields\n4. Combine all question rows into a single CSV output, with one question per row\n</scratchpad>\n\nAfter completing the CSV, please output the entire CSV inside <csv> tags, like this:\n\n<csv>\nquestion_text,question_number\n\"Question 1 text\",1\n\"Question 2 text\",2\n\"Question 2 a subquestion\",2.a\n</csv>\n\nRemember, the output should always be a valid CSV that strictly matches the described format, with all questions from the input text included."
@@ -101,7 +101,7 @@ def calculate_cost(text, model, function_name, is_input=True):
         system_prompt = ""
 
     if is_input:
-        token_count += len(system_prompt.split())
+        token_count += len(system_prompt) // 4
 
     if model == "claude-3-haiku-20240307":
         cost_per_token = 0.25 / 1e6 if is_input else 1.25 / 1e6
