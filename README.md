@@ -29,7 +29,11 @@ Run the script from the command line with the file path as an argument:
  ```
   python question_extractor.py <file_path>
  ```
-Replace `<file_path>` with the path to your Word document or PDF file.
+Or to run a specific model from anthropic:
+ ```
+  python question_extractor.py <file_path> <model_name>
+```
+Replace `<file_path>` with the path to your Word document or PDF file and `<model_name>` with any valid model name from Anthropic.
 
 ### Output
 
