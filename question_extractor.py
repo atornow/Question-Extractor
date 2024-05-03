@@ -6,12 +6,23 @@ from dotenv import load_dotenv
 import csv
 import PyPDF2
 
+# Load the environment variables from the main.env file
 load_dotenv(os.path.join(os.path.dirname(__file__), 'main.env'))
 
+# Get the Anthropic API key from the environment variable
 api_key = os.environ.get('ANTHROPIC_API_KEY')
 client = anthropic.Anthropic(api_key=api_key)
 
 def extract_text_from_pdf(file_path):
+    """
+    Extracts text from a PDF file.
+    
+    Args:
+        file_path (str): The path to the PDF file.
+    
+    Returns:
+        str: The extracted text from the PDF file.
+    """
     with open(file_path, 'rb') as file:
         reader = PyPDF2.PdfReader(file)
         text = []
@@ -21,6 +32,15 @@ def extract_text_from_pdf(file_path):
         return '\n'.join(text)
 
 def extract_text_from_docx(file_path):
+    """
+    Extracts text from a Word document (.doc or .docx).
+    
+    Args:
+        file_path (str): The path to the Word document.
+    
+    Returns:
+        str: The extracted text from the Word document.
+    """
     document = Document(file_path)
     tables = document.tables
     text = []
@@ -32,6 +52,18 @@ def extract_text_from_docx(file_path):
     return "\n".join(text)
 
 def extract_text(file_path):
+    """
+    Extracts text from a file based on its format.
+    
+    Args:
+        file_path (str): The path to the file.
+    
+    Returns:
+        str: The extracted text from the file.
+    
+    Raises:
+        ValueError: If the file format is unsupported.
+    """
     if file_path.endswith('.doc') or file_path.endswith('.docx'):
         return extract_text_from_docx(file_path)
     elif file_path.endswith('.pdf'):
@@ -40,6 +72,15 @@ def extract_text(file_path):
         raise ValueError('Unsupported file format')
 
 def clean_csv(csv_text):
+    """
+    Cleans up the CSV containing extracted questions using the Anthropic API.
+    
+    Args:
+        csv_text (str): The CSV text to be cleaned.
+    
+    Returns:
+        str: The cleaned CSV text.
+    """
     message = client.messages.create(
         model="claude-3-sonnet-20240229",
         max_tokens=3000,
@@ -60,6 +101,15 @@ def clean_csv(csv_text):
     return message.content[0].text if message.content else ""
 
 def extract_questions(text):
+    """
+    Extracts questions from the given text using the Anthropic API.
+    
+    Args:
+        text (str): The text from which to extract questions.
+    
+    Returns:
+        str: The extracted questions in CSV format.
+    """
     message = client.messages.create(
         model="claude-3-sonnet-20240229",
         max_tokens=3000,
@@ -80,6 +130,16 @@ def extract_questions(text):
     return message.content[0].text if message.content else ""
 
 def extract_answer_options(text, questions_csv):
+    """
+    Extracts answer options for the questions in the provided CSV using the Anthropic API.
+    
+    Args:
+        text (str): The original text from which the questions were extracted.
+        questions_csv (str): The CSV containing the extracted questions.
+    
+    Returns:
+        str: The updated CSV with answer options and multiple choice status added.
+    """
     message = client.messages.create(
         model="claude-3-sonnet-20240229",
         max_tokens=3000,
@@ -100,6 +160,12 @@ def extract_answer_options(text, questions_csv):
     return message.content[0].text if message.content else ""
 
 def main(file_path):
+    """
+    The main function that orchestrates the entire process of extracting questions and answer options from a file.
+    
+    Args:
+        file_path (str): The path to the file from which to extract questions.
+    """
     print(f"Processing file: {file_path}")
     try:
         text = extract_text(file_path)
@@ -108,7 +174,6 @@ def main(file_path):
         return
 
     try:
-
         questions_csv = extract_questions(text)
         print("Questions extracted:")
         print(questions_csv)
